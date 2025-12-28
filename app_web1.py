@@ -1,4 +1,4 @@
-mport streamlit as st
+import streamlit as st
 import whisper
 import os
 import subprocess
@@ -33,3 +33,4 @@ if uploaded_file:
             except Exception as e:
                 st.error(f"Error: {e}")
                 st.info("Make sure packages.txt with 'ffmpeg' is created in GitHub.")
+
