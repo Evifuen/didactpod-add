@@ -1,0 +1,7 @@
+﻿streamlit
+openai-whisper
+pydub
+deep-translator
+httpx
+numpy
+noisereduce
