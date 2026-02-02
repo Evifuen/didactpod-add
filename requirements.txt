@@ -4,4 +4,6 @@ pydub
 deep-translator
 httpx
 numpy
+edge-tts
+asyncio
 noisereduce
