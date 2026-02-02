@@ -1,9 +1,9 @@
-﻿streamlit
-openai-whisper
+streamlit
+pandas
+st-gsheets-connection
 pydub
+SpeechRecognition
 deep-translator
-httpx
-numpy
+azure-cognitiveservices-speech
 edge-tts
 asyncio
-noisereduce
