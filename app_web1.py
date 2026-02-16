@@ -83,13 +83,19 @@ with c2:
 
 up_file = st.file_uploader("Upload podcast", type=["mp3", "wav"])
 
-if up_file:
+# Lógica del Botón: Se activa si up_file existe
+if up_file is not None:
     st.audio(up_file)
+    
+    # El botón ahora está claramente fuera de cualquier otra condición de visualización
     if st.button("🚀 START EDGE DUBBING"):
         try:
             with st.spinner("🤖 Processing with Edge-TTS..."):
-                with open("temp.mp3", "wb") as f: f.write(up_file.getbuffer())
+                with open("temp.mp3", "wb") as f: 
+                    f.write(up_file.getbuffer())
+                
                 audio = AudioSegment.from_file("temp.mp3")
+                # Fragmentos de 40 segundos para evitar errores de timeout
                 chunks = [audio[i:i + 40000] for i in range(0, len(audio), 40000)]
                 final_audio = AudioSegment.empty()
                 r = sr.Recognizer()
@@ -106,7 +112,8 @@ if up_file:
                     chunk.export("c.wav", format="wav")
                     with sr.AudioFile("c.wav") as src:
                         try:
-                            text = r.recognize_google(r.record(src), language="es-ES")
+                            audio_data = r.record(src)
+                            text = r.recognize_google(audio_data, language="es-ES")
                             trans = GoogleTranslator(source='auto', target=lang_codes[target_lang]).translate(text)
                             
                             nombre_v = f"v{i}.mp3"
@@ -115,11 +122,17 @@ if up_file:
                             
                             final_audio += AudioSegment.from_file(nombre_v)
                             os.remove(nombre_v)
-                        except: continue
+                        except Exception as e:
+                            continue
                 
-                final_audio.export("result_edge.mp3", format="mp3")
-                st.audio("result_edge.mp3")
-                with open("result_edge.mp3", "rb") as f:
+                output_path = "result_edge.mp3"
+                final_audio.export(output_path, format="mp3")
+                st.audio(output_path)
+                
+                with open(output_path, "rb") as f:
                     st.download_button("📥 DOWNLOAD", f, "didapod_edge.mp3")
-        except Exception as e: st.error(f"Error: {e}")
-
+                    
+        except Exception as e: 
+            st.error(f"Error: {e}")
+else:
+    st.info("💡 Please upload an audio file to enable the Dubbing button.")
