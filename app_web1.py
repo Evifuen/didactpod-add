@@ -76,48 +76,58 @@ with c2:
 
 up_file = st.file_uploader("Upload podcast", type=["mp3", "wav"])
 
-# EL BOTÓN: Ahora se muestra condicionado a que el archivo exista
 if up_file is not None:
     st.audio(up_file)
     
     if st.button("🚀 START EDGE DUBBING"):
         try:
-            with st.spinner("🤖 Processing... This may take a minute."):
-                # Guardar en archivo temporal seguro
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
-                    tmp.write(up_file.getbuffer())
-                    temp_path = tmp.name
+            with st.spinner("🤖 Processing..."):
+                # 1. Crear un directorio temporal único para esta sesión
+                with tempfile.TemporaryDirectory() as tmpdirname:
+                    input_path = os.path.join(tmpdirname, "input_audio.mp3")
+                    
+                    with open(input_path, "wb") as f:
+                        f.write(up_file.getbuffer())
 
-                audio = AudioSegment.from_file(temp_path)
-                chunks = [audio[i:i + 30000] for i in range(0, len(audio), 30000)]
-                final_audio = AudioSegment.empty()
-                r = sr.Recognizer()
-                
-                lang_codes = {"English": "en", "Spanish": "es", "French": "fr", "Portuguese": "pt"}
-                voices = {
-                    "Female": {"English": "en-US-AvaNeural", "Spanish": "es-ES-ElviraNeural", "French": "fr-FR-DeniseNeural", "Portuguese": "pt-BR-FranciscaNeural"},
-                    "Male": {"English": "en-US-AndrewNeural", "Spanish": "es-ES-AlvaroNeural", "French": "fr-FR-RemyNeural", "Portuguese": "pt-BR-AntonioNeural"}
-                }
+                    audio = AudioSegment.from_file(input_path)
+                    # Chunks más pequeños para estabilidad
+                    chunks = [audio[i:i + 30000] for i in range(0, len(audio), 30000)]
+                    final_audio = AudioSegment.empty()
+                    r = sr.Recognizer()
+                    
+                    lang_codes = {"English": "en", "Spanish": "es", "French": "fr", "Portuguese": "pt"}
+                    voices = {
+                        "Female": {"English": "en-US-AvaNeural", "Spanish": "es-ES-ElviraNeural", "French": "fr-FR-DeniseNeural", "Portuguese": "pt-BR-FranciscaNeural"},
+                        "Male": {"English": "en-US-AndrewNeural", "Spanish": "es-ES-AlvaroNeural", "French": "fr-FR-RemyNeural", "Portuguese": "pt-BR-AntonioNeural"}
+                    }
 
-                for i, chunk in enumerate(chunks):
-                    chunk.export("c.wav", format="wav")
-                    with sr.AudioFile("c.wav") as src:
-                        try:
-                            text = r.recognize_google(r.record(src), language="es-ES")
-                            trans = GoogleTranslator(source='auto', target=lang_codes[target_lang]).translate(text)
-                            v_file = f"v{i}.mp3"
-                            asyncio.run(process_voice(trans, voices[gender][target_lang], v_file))
-                            final_audio += AudioSegment.from_file(v_file)
-                            if os.path.exists(v_file): os.remove(v_file)
-                        except: continue
-                
-                output = "result_edge.mp3"
-                final_audio.export(output, format="mp3")
-                st.audio(output)
-                with open(output, "rb") as f:
-                    st.download_button("📥 DOWNLOAD", f, "didapod_edge.mp3")
-                
-                if os.path.exists(temp_path): os.remove(temp_path)
-                
+                    for i, chunk in enumerate(chunks):
+                        chunk_path = os.path.join(tmpdirname, f"chunk_{i}.wav")
+                        chunk.export(chunk_path, format="wav")
+                        
+                        with sr.AudioFile(chunk_path) as src:
+                            try:
+                                audio_data = r.record(src)
+                                text = r.recognize_google(audio_data, language="es-ES")
+                                trans = GoogleTranslator(source='auto', target=lang_codes[target_lang]).translate(text)
+                                
+                                v_file = os.path.join(tmpdirname, f"voice_{i}.mp3")
+                                asyncio.run(process_voice(trans, voices[gender][target_lang], v_file))
+                                
+                                final_audio += AudioSegment.from_file(v_file)
+                            except Exception as e:
+                                continue
+                    
+                    # Guardar resultado final en una ruta que Streamlit pueda leer
+                    output_path = "result_edge.mp3"
+                    final_audio.export(output_path, format="mp3")
+                    
+                    # Mostrar resultados
+                    st.success("✅ Dubbing Complete!")
+                    st.audio(output_path)
+                    
+                    with open(output_path, "rb") as f:
+                        st.download_button("📥 DOWNLOAD", f, "didapod_edge.mp3")
+
         except Exception as e:
-            st.error(f"Error detectado: {e}")
+            st.error(f"Error técnico: {e}")
