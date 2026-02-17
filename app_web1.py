@@ -64,70 +64,24 @@ async def process_voice(text, voice, file):
     communicate = edge_tts.Communicate(text, voice)
     await communicate.save(file)
 
-# --- 5. INTERFACE ---
-st.markdown("<h1 style='text-align:center;'>🎙️ DIDAPOD EDGE (FREE)</h1>", unsafe_allow_html=True)
-st.write("---")
-
-c1, c2 = st.columns(2)
-with c1:
-    target_lang = st.selectbox("Language:", ["English", "Spanish", "French", "Portuguese"])
-with c2:
-    gender = st.selectbox("Voice Tone:", ["Male", "Female"])
-
+# --- 5. INTERFACE (CÓDIGO REFORZADO) ---
 up_file = st.file_uploader("Upload podcast", type=["mp3", "wav"])
 
 if up_file is not None:
+    # Mostramos el audio
     st.audio(up_file)
     
-    if st.button("🚀 START EDGE DUBBING"):
+    # FORZAMOS LA APARICIÓN DEL BOTÓN
+    # No lo metas dentro de otros 'if' o columnas complejas
+    btn_dubbing = st.button("🚀 START EDGE DUBBING", use_container_width=True)
+    
+    if btn_dubbing:
         try:
-            with st.spinner("🤖 Processing..."):
-                # 1. Crear un directorio temporal único para esta sesión
-                with tempfile.TemporaryDirectory() as tmpdirname:
-                    input_path = os.path.join(tmpdirname, "input_audio.mp3")
-                    
-                    with open(input_path, "wb") as f:
-                        f.write(up_file.getbuffer())
-
-                    audio = AudioSegment.from_file(input_path)
-                    # Chunks más pequeños para estabilidad
-                    chunks = [audio[i:i + 30000] for i in range(0, len(audio), 30000)]
-                    final_audio = AudioSegment.empty()
-                    r = sr.Recognizer()
-                    
-                    lang_codes = {"English": "en", "Spanish": "es", "French": "fr", "Portuguese": "pt"}
-                    voices = {
-                        "Female": {"English": "en-US-AvaNeural", "Spanish": "es-ES-ElviraNeural", "French": "fr-FR-DeniseNeural", "Portuguese": "pt-BR-FranciscaNeural"},
-                        "Male": {"English": "en-US-AndrewNeural", "Spanish": "es-ES-AlvaroNeural", "French": "fr-FR-RemyNeural", "Portuguese": "pt-BR-AntonioNeural"}
-                    }
-
-                    for i, chunk in enumerate(chunks):
-                        chunk_path = os.path.join(tmpdirname, f"chunk_{i}.wav")
-                        chunk.export(chunk_path, format="wav")
-                        
-                        with sr.AudioFile(chunk_path) as src:
-                            try:
-                                audio_data = r.record(src)
-                                text = r.recognize_google(audio_data, language="es-ES")
-                                trans = GoogleTranslator(source='auto', target=lang_codes[target_lang]).translate(text)
-                                
-                                v_file = os.path.join(tmpdirname, f"voice_{i}.mp3")
-                                asyncio.run(process_voice(trans, voices[gender][target_lang], v_file))
-                                
-                                final_audio += AudioSegment.from_file(v_file)
-                            except Exception as e:
-                                continue
-                    
-                    # Guardar resultado final en una ruta que Streamlit pueda leer
-                    output_path = "result_edge.mp3"
-                    final_audio.export(output_path, format="mp3")
-                    
-                    # Mostrar resultados
-                    st.success("✅ Dubbing Complete!")
-                    st.audio(output_path)
-                    
-                    with open(output_path, "rb") as f:
-                        st.download_button("📥 DOWNLOAD", f, "didapod_edge.mp3")
-
+            with st.spinner("🤖 Procesando..."):
+                # Aquí pones tu lógica de traducción
+                st.write("Iniciando proceso...")
         except Exception as e:
-            st.error(f"Error técnico: {e}")
+            st.error(f"Error: {e}")
+else:
+    st.info("👋 Por favor, sube un archivo MP3 o WAV para mostrar el botón de Dubbing.")
+
